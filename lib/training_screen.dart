@@ -1,7 +1,9 @@
+// lib/training_screen.dart
+
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:assets_audio_player/assets_audio_player.dart';
 import 'dart:math';
+import 'package:assets_audio_player/assets_audio_player.dart';
 
 class TrainingScreen extends StatefulWidget {
   final int totalMinutes;
@@ -12,59 +14,104 @@ class TrainingScreen extends StatefulWidget {
   _TrainingScreenState createState() => _TrainingScreenState();
 }
 
-class _TrainingScreenState extends State<TrainingScreen> with TickerProviderStateMixin {
+class _TrainingScreenState extends State<TrainingScreen> with SingleTickerProviderStateMixin {
+  late int remainingMinutes;
+  Timer? _timer;
+  double progress = 0.0;
   late AnimationController _controller;
-  late Timer _timer;
-  int _remainingTime = 0;
 
   @override
   void initState() {
     super.initState();
-    _remainingTime = widget.totalMinutes * 60; // Convert to seconds
-    _controller = AnimationController(vsync: this, duration: Duration(seconds: widget.totalMinutes * 60))
-      ..repeat();
-    _startTimer();
+    remainingMinutes = widget.totalMinutes;
+    _controller = AnimationController(
+      duration: const Duration(seconds: 10),
+      vsync: this,
+    )..repeat();
+
+    startTimer();
   }
 
-  void _startTimer() {
+  void startTimer() {
+    int totalSeconds = remainingMinutes * 60;
+    int elapsedSeconds = 0;
+
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (_remainingTime > 0) {
-        setState(() {
-          _remainingTime--;
-        });
-      } else {
-        _timer.cancel();
-        _sessionComplete();
-      }
+      setState(() {
+        if (elapsedSeconds < totalSeconds) {
+          elapsedSeconds++;
+          remainingMinutes = (totalSeconds - elapsedSeconds) ~/ 60;
+          progress = elapsedSeconds / totalSeconds;
+        } else {
+          _timer?.cancel();
+          _controller.stop();
+          playCompletionSound();
+          showCompletionDialog();
+        }
+      });
     });
   }
 
-  void _sessionComplete() {
+  void playCompletionSound() {
     final assetsAudioPlayer = AssetsAudioPlayer();
     assetsAudioPlayer.open(
       Audio("assets/success.mp3"),
     );
+  }
+
+  void showCompletionDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Session Complete!'),
-        content: Text('You completed your session!'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context); // Go back to home
-            },
-            child: Text('OK'),
-          ),
-        ],
-      ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Session Complete!'),
+          content: Text('Well done! You stayed away for ${widget.totalMinutes} minutes.'),
+          actions: [
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Navigate back to home screen
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add this method to allow users to end their session early
+  void endSessionEarly() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('End Session?'),
+          content: Text('Are you sure you want to end the session? Progress will not be counted.'),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('End Session'),
+              onPressed: () {
+                _timer?.cancel();
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop(); // Return to the home screen
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -73,27 +120,58 @@ class _TrainingScreenState extends State<TrainingScreen> with TickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: Stack(
-          alignment: Alignment.center,
+      appBar: AppBar(
+        title: Text('Training Session'),
+        backgroundColor: Colors.blueAccent,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.stop),
+            onPressed: endSessionEarly, // Provide option to end session early
+          )
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            for (int i = 0; i < 5; i++)
-              AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    angle: _controller.value * 2 * pi * (i % 2 == 0 ? 1 : -1),
+            Text(
+              'Stay Away From Your Phone!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 30),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                for (int i = 0; i < 4; i++)
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _controller.value * 2 * pi * (i % 2 == 0 ? 1 : -1),
+                        child: child,
+                      );
+                    },
                     child: CustomPaint(
-                      painter: CirclePainter(Colors.primaries[i]),
+                      painter: CirclePainter(color: Colors.primaries[i % Colors.primaries.length]),
                       size: Size(200, 200),
                     ),
-                  );
-                },
-              ),
-            Text(
-              '${(_remainingTime / 60).ceil()} min',
-              style: TextStyle(color: Colors.white, fontSize: 32),
+                  ),
+                Center(
+                  child: Text(
+                    '$remainingMinutes min',
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ],
             ),
+            SizedBox(height: 40),
+            if (remainingMinutes == 0)
+              Text(
+                'Session Completed! Well done!',
+                style: TextStyle(fontSize: 18, color: Colors.green, fontWeight: FontWeight.bold),
+              ),
           ],
         ),
       ),
@@ -104,12 +182,12 @@ class _TrainingScreenState extends State<TrainingScreen> with TickerProviderStat
 class CirclePainter extends CustomPainter {
   final Color color;
 
-  CirclePainter(this.color);
+  CirclePainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.5)
+      ..color = color.withOpacity(0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
@@ -121,7 +199,7 @@ class CirclePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
 }

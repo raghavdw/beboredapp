@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'widgets/oscillating_bored.dart';
-import 'training_screen.dart';
-import 'settings_screen.dart';
-import 'plan_selection_screen.dart';
+import 'package:beboredapp/start_screen.dart';
+import 'package:beboredapp/training_screen.dart';
+import 'package:beboredapp/plan_selection_screen.dart';
+import 'package:beboredapp/session_duration_screen.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BeBored',
+      debugShowCheckedModeBanner: false,
+      title: 'BeBored App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: HomeScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => StartScreen(),
+        '/home': (context) => HomeScreen(),
+        '/training': (context) => TrainingScreen(totalMinutes: 5), // Default 5 min for now
+      },
     );
   }
 }
@@ -28,18 +35,24 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _sessionDuration = 5; // default value
+  int selectedMinutes = 5;
+  int sessionsPerDay = 1;
+  double progress = 0.0;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadSessionDuration();
+  void _startTrainingSession() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TrainingScreen(totalMinutes: selectedMinutes),
+      ),
+    );
   }
 
-  Future<void> _loadSessionDuration() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  void _selectTrainingPlan(int minutes, int sessions) {
     setState(() {
-      _sessionDuration = prefs.getInt('sessionDuration') ?? 5; // Load saved duration
+      selectedMinutes = minutes;
+      sessionsPerDay = sessions;
+      progress = 0.0; // Reset progress when changing plan
     });
   }
 
@@ -48,33 +61,68 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('BeBored'),
+        backgroundColor: Colors.lightBlueAccent,
         actions: [
-          IconButton(
-            icon: Icon(Icons.menu),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen()));
-            },
+          Builder(
+            builder: (context) => IconButton(
+              icon: Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: <Widget>[
+            DrawerHeader(
+              child: Text('BeBored Menu'),
+              decoration: BoxDecoration(color: Colors.lightBlueAccent),
+            ),
+            ListTile(
+              title: Text('Settings'),
+              onTap: () {},
+            ),
+            ListTile(
+              title: Text('Training Plan'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PlanSelectionScreen(
+                      onTrainingPlanSelected: _selectTrainingPlan,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              title: Text('About'),
+              onTap: () {},
+            ),
+          ],
+        ),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            OscillatingBored(),
+            Text(
+              'Continue Training',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TrainingScreen(totalMinutes: _sessionDuration)),
-                );
-              },
-              child: Text('Continue Training'),
+            Text(
+              'Session: $selectedMinutes min | $sessionsPerDay sessions/day',
+              style: TextStyle(fontSize: 16),
             ),
             Text(
-              'Session: $_sessionDuration min',
+              'Progress: ${progress * 100} % completed',
               style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 40),
+            ElevatedButton(
+              onPressed: _startTrainingSession,
+              child: Text('Continue Training'),
             ),
           ],
         ),
