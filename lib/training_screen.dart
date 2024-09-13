@@ -1,143 +1,100 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:assets_audio_player/assets_audio_player.dart';
 import 'dart:math';
 
 class TrainingScreen extends StatefulWidget {
   final int totalMinutes;
-  final int totalSessions;
-  final int sessionsCompleted;
-  final Function onSessionCompleted;
 
-  TrainingScreen({
-    required this.totalMinutes,
-    required this.totalSessions,
-    required this.sessionsCompleted,
-    required this.onSessionCompleted,
-  });
+  TrainingScreen({required this.totalMinutes});
 
   @override
   _TrainingScreenState createState() => _TrainingScreenState();
 }
 
-class _TrainingScreenState extends State<TrainingScreen>
-    with SingleTickerProviderStateMixin {
-  late int remainingMinutes;
-  Timer? _timer;
+class _TrainingScreenState extends State<TrainingScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
-  bool sessionInProgress = true; // Track if the session is active
+  late Timer _timer;
+  int _remainingTime = 0;
 
   @override
   void initState() {
     super.initState();
-    remainingMinutes = widget.totalMinutes;
-    _controller = AnimationController(
-      duration: const Duration(seconds: 10),
-      vsync: this,
-    )..repeat();
-
-    // Automatically start the timer
-    startTimer();
+    _remainingTime = widget.totalMinutes * 60; // Convert to seconds
+    _controller = AnimationController(vsync: this, duration: Duration(seconds: widget.totalMinutes * 60))
+      ..repeat();
+    _startTimer();
   }
 
-  void startTimer() {
-    int totalSeconds = remainingMinutes * 60;
-    int elapsedSeconds = 0;
-
+  void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        if (elapsedSeconds < totalSeconds) {
-          elapsedSeconds++;
-          remainingMinutes = (totalSeconds - elapsedSeconds) ~/ 60;
-        } else {
-          _timer?.cancel();
-          sessionInProgress = false;
-          widget.onSessionCompleted(); // Complete session and update progress
-          Navigator.pop(context); // Go back to home screen when session is done
-        }
-      });
+      if (_remainingTime > 0) {
+        setState(() {
+          _remainingTime--;
+        });
+      } else {
+        _timer.cancel();
+        _sessionComplete();
+      }
     });
   }
 
-  void stopSession() {
-    // Cancel the timer if session is stopped
-    _timer?.cancel();
-    sessionInProgress = false;
-  }
-
-  void _showStopConfirmation() {
+  void _sessionComplete() {
+    final assetsAudioPlayer = AssetsAudioPlayer();
+    assetsAudioPlayer.open(
+      Audio("assets/success.mp3"),
+    );
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Stop Session'),
-          content: Text('Are you sure you want to stop the session? Progress will not be saved.'),
-          actions: [
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop(); // Dismiss the dialog
-              },
-            ),
-            TextButton(
-              child: Text('Stop'),
-              onPressed: () {
-                stopSession();
-                Navigator.of(context).pop(); // Dismiss the dialog
-                Navigator.pop(context); // Go back to the home screen
-              },
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: Text('Session Complete!'),
+        content: Text('You completed your session!'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Go back to home
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _timer.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Show stop confirmation dialog on user interaction
-        _showStopConfirmation();
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              for (int i = 0; i < 4; i++)
-                AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _controller.value * 2 * pi * (i % 2 == 0 ? 1 : -1),
-                      child: child,
-                    );
-                  },
-                  child: CustomPaint(
-                    painter: CirclePainter(color: Colors.primaries[i]),
-                    size: Size(200, 200),
-                  ),
-                ),
-              Center(
-                child: Text(
-                  '$remainingMinutes min',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            for (int i = 0; i < 5; i++)
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Transform.rotate(
+                    angle: _controller.value * 2 * pi * (i % 2 == 0 ? 1 : -1),
+                    child: CustomPaint(
+                      painter: CirclePainter(Colors.primaries[i]),
+                      size: Size(200, 200),
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
+            Text(
+              '${(_remainingTime / 60).ceil()} min',
+              style: TextStyle(color: Colors.white, fontSize: 32),
+            ),
+          ],
         ),
       ),
     );
@@ -147,14 +104,15 @@ class _TrainingScreenState extends State<TrainingScreen>
 class CirclePainter extends CustomPainter {
   final Color color;
 
-  CirclePainter({required this.color});
+  CirclePainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.6)
+      ..color = color.withOpacity(0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
+
     canvas.drawCircle(
       Offset(size.width / 2, size.height / 2),
       size.width / 2,
@@ -163,7 +121,7 @@ class CirclePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true; // Repaint continuously
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return true;
   }
 }

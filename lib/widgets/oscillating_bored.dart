@@ -6,23 +6,16 @@ class OscillatingBored extends StatefulWidget {
   _OscillatingBoredState createState() => _OscillatingBoredState();
 }
 
-class _OscillatingBoredState extends State<OscillatingBored>
-    with SingleTickerProviderStateMixin {
+class _OscillatingBoredState extends State<OscillatingBored> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
       vsync: this,
+      duration: Duration(seconds: 2),
     )..repeat(reverse: true);
-
-    _animation = Tween<double>(begin: -10, end: 10).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
   }
 
   @override
@@ -34,18 +27,15 @@ class _OscillatingBoredState extends State<OscillatingBored>
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _animation,
+      animation: _controller,
+      child: Text(
+        'BeBored',
+        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.blue),
+      ),
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(_animation.value, 0),
-          child: Text(
-            'BeBored',
-            style: TextStyle(
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueAccent,
-            ),
-          ),
+          offset: Offset(0, sin(_controller.value * 2 * pi) * 10),
+          child: child,
         );
       },
     );
