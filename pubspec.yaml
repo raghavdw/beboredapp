@@ -1,5 +1,6 @@
 name: beboredapp
-description: "A Flutter app to train users to stay away from their phone for decided minutes."
+description: A simple training app
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
@@ -9,9 +10,10 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  vibration: ^1.9.0
+  percent_indicator: ^4.2.2  # Add this line
   assets_audio_player: ^3.1.1
-  shared_preferences: ^2.0.15
+  vibration: ^1.9.0
+  shared_preferences: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -20,6 +22,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
-    - assets/success.mp3
     - assets/be_bored_logo.png
+    - assets/success.mp3
