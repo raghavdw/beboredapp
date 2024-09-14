@@ -1,36 +1,47 @@
 import 'package:flutter/material.dart';
-import 'week_state.dart';
-import 'session_state.dart';
 
 class PlanSelectionScreen extends StatelessWidget {
+  final Function(int, int) onTrainingPlanSelected;
+
+  PlanSelectionScreen({required this.onTrainingPlanSelected});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Select Training Plan'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (int week = 1; week <= 4; week++)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton(
-                  onPressed: WeekState.isWeekUnlocked(week)
-                      ? () {
-                          Navigator.pushNamed(
-                            context,
-                            '/training',
-                            arguments: {'week': week},
-                          );
-                        }
-                      : null, // Button is disabled if the week is locked
-                  child: Text('Week $week Plan'),
-                ),
-              ),
-          ],
-        ),
+      body: ListView(
+        children: [
+          ListTile(
+            title: Text('Week 1: 5 min / 2 sessions per day'),
+            onTap: () {
+              onTrainingPlanSelected(5, 2);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: Text('Week 2: 10 min / 3 sessions per day'),
+            onTap: () {
+              onTrainingPlanSelected(10, 3);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: Text('Week 3: 15 min / 3 sessions per day'),
+            onTap: () {
+              onTrainingPlanSelected(15, 3);
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: Text('Week 4: 20 min / 4 sessions per day'),
+            onTap: () {
+              onTrainingPlanSelected(20, 4);
+              Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }
