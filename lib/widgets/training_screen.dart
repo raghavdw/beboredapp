@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:async';  // Required for countdown timer
+import 'dart:async';
 
 class TrainingScreen extends StatefulWidget {
   final int sessionMinutes;
@@ -11,86 +11,102 @@ class TrainingScreen extends StatefulWidget {
 }
 
 class _TrainingScreenState extends State<TrainingScreen> {
-  late int minutesLeft;  // Proper initialization
-  late int secondsLeft;  // To track seconds within a minute
+  late int minutesLeft;
+  late Timer _timer;
   bool sessionStarted = false;
-  Timer? countdownTimer;
 
   @override
   void initState() {
     super.initState();
     minutesLeft = widget.sessionMinutes;
-    secondsLeft = 0;  // Start with 0 seconds
   }
 
   void _startSession() {
     setState(() {
       sessionStarted = true;
+      _startTimer();
     });
-    _startCountdown();
   }
 
-  void _startCountdown() {
-    countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        if (secondsLeft > 0) {
-          secondsLeft--;
-        } else if (minutesLeft > 0) {
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (minutesLeft > 0) {
+        setState(() {
           minutesLeft--;
-          secondsLeft = 59;
-        } else {
-          _stopCountdown();
-          _showSessionCompletedDialog();
-        }
-      });
+        });
+      } else {
+        _stopSession();
+      }
     });
   }
 
-  void _stopCountdown() {
-    if (countdownTimer != null) {
-      countdownTimer!.cancel();
-    }
+  void _stopSession() {
+    _timer.cancel();
+    setState(() {
+      sessionStarted = false;
+      minutesLeft = widget.sessionMinutes; // Reset to initial time
+    });
   }
 
-  void _showSessionCompletedDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Session Completed'),
-        content: Text('Congratulations! You have completed your session.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _stopSession();
-            },
-            child: Text('OK'),
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        return await _confirmStopSession();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Training Session'),
+          actions: [
+            if (sessionStarted)
+              IconButton(
+                icon: Icon(Icons.stop),
+                onPressed: _confirmStopSession,
+              ),
+          ],
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Stay Away From Your Phone!'),
+              SizedBox(height: 20),
+              Text(
+                '${minutesLeft.toString().padLeft(2, '0')}:00',
+                style: TextStyle(fontSize: 48),
+              ),
+              SizedBox(height: 20),
+              sessionStarted
+                  ? ElevatedButton(
+                      onPressed: _confirmStopSession,
+                      child: Text('Stop Session'),
+                    )
+                  : ElevatedButton(
+                      onPressed: _startSession,
+                      child: Text('Start Session'),
+                    ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  void _stopSession() {
-    showDialog(
+  Future<bool> _confirmStopSession() async {
+    return await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Stop Session'),
-        content: Text('Are you sure you want to stop the session?'),
+        content: Text('Are you sure you want to stop this session?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: Text('No'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              setState(() {
-                sessionStarted = false;
-                minutesLeft = widget.sessionMinutes;
-                secondsLeft = 0;  // Reset the session time
-                _stopCountdown();
-              });
+              _stopSession();
+              Navigator.of(context).pop(true);
             },
             child: Text('Yes'),
           ),
@@ -101,49 +117,7 @@ class _TrainingScreenState extends State<TrainingScreen> {
 
   @override
   void dispose() {
-    _stopCountdown();  // Ensure timer is canceled when screen is disposed
+    _timer.cancel();
     super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Training Session'),
-        actions: [
-          if (sessionStarted)
-            IconButton(
-              icon: Icon(Icons.stop),
-              onPressed: _stopSession,
-            ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Stay Away From Your Phone!',
-              style: TextStyle(fontSize: 24),
-            ),
-            SizedBox(height: 20),
-            Text(
-              '${minutesLeft.toString().padLeft(2, '0')}:${secondsLeft.toString().padLeft(2, '0')}',
-              style: TextStyle(fontSize: 48),
-            ),
-            SizedBox(height: 20),
-            sessionStarted
-                ? ElevatedButton(
-                    onPressed: _stopSession,
-                    child: Text('Stop Session'),
-                  )
-                : ElevatedButton(
-                    onPressed: _startSession,
-                    child: Text('Start Session'),
-                  ),
-          ],
-        ),
-      ),
-    );
   }
 }

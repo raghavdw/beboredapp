@@ -1,66 +1,45 @@
 import 'package:flutter/material.dart';
-import 'week_progress_tracker.dart';
-import 'session_state.dart';
-import 'plan_selection_screen.dart';
+import 'week_progress_tracker.dart'; // Updated to show progress
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends StatelessWidget {
   final int week;
 
   MainScreen({required this.week});
 
   @override
-  _MainScreenState createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int currentDaySessions = 0;
-  int totalDaySessions = 3; // Default for demonstration, you can update based on the week
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Training Plan - Week ${widget.week}'),
+        title: Text('Main Screen'),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.info_outline),
             onPressed: () {
-              Navigator.pushNamed(context, '/settings');
+              Navigator.pushNamed(context, '/about');
             },
           ),
         ],
       ),
-      body: Column(
-        children: [
-          SizedBox(height: 20),
-          // Daily Session Progress Tracker
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                Text('Daily Progress', style: TextStyle(fontSize: 20)),
-                LinearProgressIndicator(
-                  value: currentDaySessions / totalDaySessions,
-                  backgroundColor: Colors.grey,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-                ),
-                SizedBox(height: 10),
-                Text('$currentDaySessions / $totalDaySessions sessions completed'),
-              ],
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Your Training Progress',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-          ),
-          SizedBox(height: 20),
-          // Button to Start Training
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/training');
-            },
-            child: Text('Start Training'),
-          ),
-          SizedBox(height: 20),
-          // Weekly Progress Tracker
-          WeekProgressTracker(currentWeek: widget.week),
-        ],
+            SizedBox(height: 10),
+            WeekProgressTracker(week: week), // Pass the week parameter
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/training');
+              },
+              child: Text('Continue Training'),
+            ),
+          ],
+        ),
       ),
     );
   }
