@@ -18,8 +18,8 @@ class BeBoredApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => StartScreen(),
-        '/home': (context) => MainScreen(week: 1),  // Updated to use /home route
-        '/training': (context) => TrainingScreen(sessionMinutes: 5),  // Pass the session minutes here
+        '/home': (context) => MainScreen(week: 1, totalSessions: 10, completedSessions: 3),
+        '/training': (context) => TrainingScreen(sessionMinutes: 5),
       },
     );
   }
